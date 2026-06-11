@@ -1,242 +1,167 @@
-import React, { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { Lock, Mail, Eye, EyeOff } from "lucide-react";
-
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-
-import { signIn } from "../services/authService";
-import { useAuthContext } from "../context/AuthContext";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Scissors, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { STORE_NAME } from "../utils/constants";
 
 export default function AdminLogin() {
-  const navigate = useNavigate();
-  const { user, loading } = useAuthContext();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const { login, loading, error, user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    setError("");
-  }, [email, password]);
-
-  if (!loading && user) {
-    return <Navigate to="/admin" replace />;
-  }
+    if (user) navigate("/admin", { replace: true });
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    try {
-      setSubmitting(true);
-      setError("");
-
-      await signIn(email, password);
-
-      navigate("/admin");
-    } catch (err) {
-      setError(err.message || "Unable to sign in.");
-    } finally {
-      setSubmitting(false);
-    }
+    await login(email, password);
   };
 
   return (
-    <>
-      <Navbar />
-
-      <main
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--espresso)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+      }}
+    >
+      <div
         style={{
-          minHeight: "80vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "80px 20px",
+          width: "100%",
+          maxWidth: 420,
           background: "var(--cream)",
+          borderRadius: "var(--radius-lg)",
+          padding: "48px 40px",
+          boxShadow: "var(--shadow-lg)",
         }}
       >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 460,
-            background: "var(--white)",
-            borderRadius: "var(--radius-lg)",
-            padding: 40,
-            boxShadow: "var(--shadow-lg)",
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                margin: "0 auto 20px",
-                background: "var(--espresso)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Lock size={28} color="var(--gold)" />
-            </div>
-
-            <p className="section-subtitle" style={{ marginBottom: 8 }}>
-              Administration
-            </p>
-
-            <h1 className="section-title">Admin Login</h1>
-
-            <p
-              style={{
-                marginTop: 12,
-                color: "var(--brown-light)",
-                fontSize: "0.9rem",
-              }}
-            >
-              Sign in to manage products, categories and images.
-            </p>
-          </div>
-
-          <form
-            onSubmit={handleSubmit}
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div
             style={{
+              width: 52,
+              height: 52,
+              background: "var(--espresso)",
+              borderRadius: "50%",
               display: "flex",
-              flexDirection: "column",
-              gap: 18,
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 14px",
             }}
           >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontSize: "0.85rem",
-                  color: "var(--brown-mid)",
-                }}
-              >
-                Email Address
-              </label>
-
-              <div style={{ position: "relative" }}>
-                <Mail
-                  size={16}
-                  style={{
-                    position: "absolute",
-                    left: 14,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--brown-light)",
-                  }}
-                />
-
-                <input
-                  type="email"
-                  required
-                  className="form-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@example.com"
-                  style={{
-                    width: "100%",
-                    paddingLeft: 42,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontSize: "0.85rem",
-                  color: "var(--brown-mid)",
-                }}
-              >
-                Password
-              </label>
-
-              <div style={{ position: "relative" }}>
-                <Lock
-                  size={16}
-                  style={{
-                    position: "absolute",
-                    left: 14,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--brown-light)",
-                  }}
-                />
-
-                <input
-                  required
-                  className="form-input"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
-                  style={{
-                    width: "100%",
-                    paddingLeft: 42,
-                    paddingRight: 42,
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  style={{
-                    position: "absolute",
-                    right: 12,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    color: "var(--brown-light)",
-                  }}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: "var(--radius-md)",
-                  background: "#FEF2F2",
-                  color: "#B91C1C",
-                  fontSize: "0.875rem",
-                }}
-              >
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-gold"
-              style={{
-                justifyContent: "center",
-                width: "100%",
-                opacity: submitting ? 0.8 : 1,
-              }}
-            >
-              {submitting ? "Signing In..." : "Sign In"}
-            </button>
-          </form>
+            <Scissors size={22} color="var(--gold)" />
+          </div>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.6rem",
+              fontWeight: 400,
+              color: "var(--espresso)",
+              marginBottom: 4,
+            }}
+          >
+            {STORE_NAME}
+          </h1>
+          <p
+            style={{
+              fontSize: "0.8rem",
+              color: "var(--brown-light)",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
+          >
+            Admin Portal
+          </p>
         </div>
-      </main>
 
-      <Footer />
-    </>
+        {error && (
+          <div
+            style={{
+              background: "#fdf0ef",
+              border: "1px solid #f5c6c2",
+              borderRadius: "var(--radius-sm)",
+              padding: "12px 16px",
+              color: "var(--error)",
+              fontSize: "0.875rem",
+              marginBottom: 24,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 20 }}
+        >
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input
+              className="form-input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@example.com"
+              required
+              autoFocus
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div style={{ position: "relative" }}>
+              <input
+                className="form-input"
+                type={showPw ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                style={{ paddingRight: 40 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw(!showPw)}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "var(--gray-400)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={loading}
+            style={{
+              justifyContent: "center",
+              padding: "14px",
+              marginTop: 8,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+          >
+            {loading ? "Signing in…" : "Sign In"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

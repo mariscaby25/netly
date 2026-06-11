@@ -1,142 +1,86 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
+import Navbar from "../components/Navbar";
+import ProductForm from "./ProductForm";
 import {
   createProduct,
-  getCategories,
-  slugify,
   uploadProductImage,
   addProductImage,
 } from "../services/productService";
 
 export default function AddProduct() {
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const [imageFile, setImageFile] = useState(null);
-
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    price: "",
-    original_price: "",
-    category_id: "",
-    texture: "",
-    length: "",
-    is_featured: false,
-    is_available: true,
-  });
-
-  useEffect(() => {
-    getCategories().then(setCategories);
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleImageChange = (e) => {
-    setImageFile(e.target.files[0]);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (data, pendingFiles) => {
     setLoading(true);
-
     try {
-      // 1. Create product first
-      const product = await createProduct({
-        ...form,
-        slug: slugify(form.name),
-      });
+      // 1. Create product record
+      const product = await createProduct(data);
 
-      // 2. Upload image if exists
-      if (imageFile) {
-        const { publicUrl, storagePath } = await uploadProductImage(
-          imageFile,
-          product.id,
-        );
-
-        // 3. Save image reference in DB
-        await addProductImage({
-          product_id: product.id,
-          image_url: publicUrl,
-          storage_path: storagePath,
-          is_primary: true,
-        });
+      // 2. Upload any pending images
+      if (pendingFiles.length > 0) {
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const file = pendingFiles[i];
+          const { publicUrl, storagePath } = await uploadProductImage(
+            file,
+            product.id,
+          );
+          await addProductImage({
+            product_id: product.id,
+            image_url: publicUrl,
+            storage_path: storagePath,
+            is_primary: i === 0,
+            sort_order: i,
+          });
+        }
       }
 
-      navigate("/admin/products");
+      toast.success("Product created successfully!");
+      navigate(`/admin/products/edit/${product.id}`);
     } catch (err) {
-      console.error(err);
-      alert("Failed to create product");
+      toast.error("Error: " + err.message);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
-    <div className="container" style={{ padding: "60px 0" }}>
-      <h2 className="section-title">Add Product</h2>
+    <>
+      <Navbar />
+      <main style={{ padding: "48px 0 80px", minHeight: "80vh" }}>
+        <div className="container" style={{ maxWidth: 860 }}>
+          <Link
+            to="/admin/products"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: "var(--brown-mid)",
+              fontSize: "0.875rem",
+              marginBottom: 32,
+              textDecoration: "none",
+            }}
+          >
+            <ArrowLeft size={15} /> Back to Products
+          </Link>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-        <input
-          name="name"
-          placeholder="Name"
-          onChange={handleChange}
-          required
-        />
+          <div style={{ marginBottom: 36 }}>
+            <p className="section-subtitle" style={{ marginBottom: 8 }}>
+              Admin
+            </p>
+            <h1 className="section-title">Add New Product</h1>
+          </div>
 
-        <textarea
-          name="description"
-          placeholder="Description"
-          onChange={handleChange}
-        />
-
-        <input
-          name="price"
-          placeholder="Price"
-          onChange={handleChange}
-          required
-        />
-
-        <input
-          name="original_price"
-          placeholder="Original Price"
-          onChange={handleChange}
-        />
-
-        <select name="category_id" onChange={handleChange}>
-          <option value="">Select Category</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        <input name="texture" placeholder="Texture" onChange={handleChange} />
-        <input name="length" placeholder="Length" onChange={handleChange} />
-
-        {/* ✅ IMAGE UPLOAD FIELD */}
-        <input type="file" accept="image/*" onChange={handleImageChange} />
-
-        <label>
-          <input type="checkbox" name="is_featured" onChange={handleChange} />
-          Featured
-        </label>
-
-        <button disabled={loading} className="btn-gold">
-          {loading ? "Saving..." : "Create Product"}
-        </button>
-      </form>
-    </div>
+          <ProductForm
+            onSubmit={handleSubmit}
+            loading={loading}
+            submitLabel="Create Product"
+          />
+        </div>
+      </main>
+    </>
   );
 }
